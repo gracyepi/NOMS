@@ -1,0 +1,267 @@
+/********************************************
+*	NOMS Cleaning and Analyzing				*
+*	Kansas Zero Suicide Program NOMS		*
+*	Programmer: Lauren Gracy				*
+*	Date: 5/9/2023							*
+********************************************/
+/*bring in the recoded formats*/
+%include "\\kdhe\dfs\HEALTH\Health Promotion\Injury Disability\LGracy_secure\Zero Suicide\Evaluation\NOMs\NOMS Analysis\NOMS Recoding.sas";
+/*bring in file after pulling excel report from SPARS*/
+PROC IMPORT datafile="\\kdhe\dfs\HEALTH\Health Promotion\Injury Disability\LGracy_secure\Zero Suicide\Evaluation\NOMs\Downloaded from SPARS\ExcelReport_2023 05 09.xlsx"
+	DBMS= xlsx
+	OUT=NOMS
+	REPLACE;
+	GETNAMES=yes;
+RUN;
+
+/*************************Clean and Recode*************************/
+DATA NOMS;
+	SET NOMS;
+	LENGTH Race $ 30. RaceEthnicity $ 45.;
+
+*create new variable for Race to combine all the race into one variable
+	If you ever get enough to disaggregate, then separate the asian and 
+	hispanic ethnicities;
+	IF RaceBlack = 1 THEN Race = "Black";
+	ELSE IF RaceSouthAsian = 1 THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceChinese = 1 THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceFilipino THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceJapanese THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceKorean THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceVietnamese THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceOtherAsian THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceNativeHawaiian = 1 THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceGuamanianChamorro = 1 THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceSamoan = 1 THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceOtherPacificIslander = 1 THEN Race = "Asian/Pacific Islander";
+	ELSE IF RaceAlaskaNative = 1 THEN Race = "American Indian/Alaska Native";
+	ELSE IF RaceWhite = 1 THEN Race = "White";
+	ELSE IF RaceAmericanIndian = 1 THEN Race = "American Indian/Alaska Native";
+	ELSE IF RaceOther = 1 THEN Race = "Other";
+	ELSE Race = "Missing or Not Specified";
+
+	IF HispanicLatino = 1 THEN RaceEthnicity = "Hispanic";
+	ELSE IF Race = "Asian/Pacific Islander" AND HispanicLatino = 0 THEN RaceEthnicity = "Asian/Pacific Islander, Non-Hispanic";
+	ELSE IF Race= "Black" AND HispanicLatino = 0 THEN RaceEthnicity = "Black, Non-Hispanic";
+	ELSE IF Race = "American Indian/Alaska Native" AND HispanicLatino = 0 THEN RaceEthnicity = "American Indian/Alaska Native, Non-Hispanic";
+	ELSE IF Race = "White" AND HispanicLatino = 0 THEN RaceEthnicity = "White, Non-Hispanic";
+	ELSE IF Race = "Other" AND HispanicLatino = 0 THEN RaceEthnicity = "Other, Non-Hispanic";
+	ELSE RaceEthnicity = "Missing or Not Specified";
+	
+*age calculation;
+	Age_at_Interview = intck('year',DOB, InterviewDate,'c');
+	Age = intck('year',DOB, today(),"c");
+
+	IF 25<=age<=34 THEN agegroup_s="25-34yrs";
+	IF 35<=age<=44 THEN agegroup_s="35-44yrs";
+	IF 45<=age<=54 THEN agegroup_s="45-54yrs";
+	IF 55<=age<=64 THEN agegroup_s="55-64yrs";
+	IF 65<=age<=74 THEN agegroup_s="65-74yrs";
+	IF age>=75 	THEN 	agegroup_s="75+";
+
+
+*format numbers to words as neccessary;
+	FORMAT 	Assessment	assess.
+			ConductedInterview yesno_conv.
+			WhyNotConducted int_not.
+			TraumaScreenedConducted yesno_conv.
+			TraumaNoScreenResponse trauma_screen.
+			TraumaYesScreenResponse yesno_conv.
+			SuicideScreen yesno_conv.
+			SuicideSafetyPlanDeveloped yesno_conv.
+			SuicideLethalAssessed yesno_conv.
+			DiagnosisOne dx_conv.
+			DiagnosisTwo dx_conv.
+			DiagnosisThree dx_conv.
+			Gender gender_conv.
+			SexualIdentity sex_ID.
+			HispanicLatino ethn_conv.
+			SpeakOtherLanguage_EN yesno_conv.
+			SpeakWhatLanguage_EN language_en.
+			SpeakOtherLanguage_ES yesno_conv.
+			SpeakWhatLanguage_ES language_es.
+			EverServed ActiveDuty_Self  yesno_conv.
+			OverallMentalHealth mental_health.
+			HandlingDailyLife DealwithUnexpectedEvents GetsAlongWithFriends 
+				GetsAlongWithFamily SocialSituations SchoolOrWork SafePlaceToLive	yesno_conv.
+			Nervous Hopeless Restless Depressed EverythingEffort
+				Worthless PsychologicalEmotionalProblems yesno_conv.
+			BeenHomeless SpentTimeHospitalMHC SpentTimeDetox SpentTimeJail
+				SpentTimeER LivingConditionsSatisfaction yesno_conv.
+			Housing housing.
+			Enrolled yesno_conv.
+			Education education.
+			Employment employment.
+			EnoughMoneyForNeeds yesno_conv.
+			BeenArrested SpentTimeJailorProbation yesno_conv.
+			Recover Complain Rights Responsibility SideEffects 
+				SharingTreatmentInformation SensitiveToCulture
+				InformationNeeded ConsumerRunPrograms ComfortableAskingQuestions
+				TreatmentGoals LikeServices Choices RecommendAgency yesno_conv.
+			WhoAdministered who_admin.
+			Friendships EnjoyPeople BelongInCommunity SupportFromFamily
+				SupportFamilyFriends GenerallyAccomplishGoal yesno_conv.
+			Svc_Screening Svc_Assessment Svc_TreatmentPlanning Svc_Psychopharmacological
+				Svc_MentalHealth Svc_CoOccuring Svc_CaseManagement
+				Svc_TraumaSpecific Svc_ReferredCore Svc_MedicalCare Svc_Employment
+				Svc_Family Svc_ChildCare Svc_Transportation Svc_Education
+				Svc_Housing Svc_SocialRecreational	Svc_ConsumerOperated Svc_HIVTesting SVC_ReferredSupport yesno_conv.
+			DischargeStatus discharge.	
+			;					   
+					  
+	
+*create grant year to measure change across time;
+	IF FFY = 2022 THEN GrantYear = 2;
+	IF FFY = 2023 THEN GrantYear = 3;
+	IF FFY = 2024 THEN GrantYear = 4;
+	IF FFY = 2025 THEN GrantYear = 5;
+
+*recode the housing;
+	IF housing = 23 THEN housing = 4;
+	IF housing = 20 THEN housing = 1;
+
+
+	DROP ClientType RespondentType RecordStatus MedicationAsPrescribed TreatmentCompliant ClientRefMentalHealthSvc_G2
+		ClientRecdMentalHealthSvc_G2 ClientRefSUDSvc_G2 ClientRecdMentalHealthSvc_G2
+		ClientRefSUDSvc_G2 ClientRecdSUDSvc_G2 SvcHelpedAvoidJusticeSystem
+		BeenToEmergencyPHC BeenHospitalizedOvernightPHC bpressure_s_G3
+		bpressure_d_G3 Weight_G3 Height_G3 BreathCO DateBloodDrawn Plasma_gluc
+		HgbA1c Lipid_TotChol Lipid_LDL HIVTest HIVTestResult HIVTestTreatmentServices
+		HBVTest HBVTestResult HBVTestTreatmentServices HCVTest HCVTestResult
+		HCVTestTreatmentServices HIVGranteeReferral HIVARTMedication
+		HIVARTMedicationFreq ClientRefMentalHealthSvc_G5 ClientRecdMentalHealthSvc_G5
+		ClientRefSUDSvc_G5 ClientRecdSUDSvc_G5 OftennessOfTeamInteraction
+		KnowWhoToCall ExpPsychosis DateExpInitialPsychosis ReferredToPsychosisSvc
+		DateReceivedPsychosisSvc DateRecdPsychosisSvcNoResKey ClientCrisisMentalHealthSvc
+		ClientScreeningSvc ClientPatientSvc ClientOutpatientMentalHealthSvc
+		ClientPhysicalHealthScreening ClientTargetedCaseMgt ClientPsychiatricRehabSvc
+		ClientPeerSupportSvc ClientFamilyPsychoeducationSvc ClientVeteransMilitarySvc
+		bpressure_s_G8 bpressure_d_G8 Weight_G8 Height_G8 TraumaLossExpIdAddressed
+		ProbBehaviorSymptDecreased 
+		;
+RUN;	
+
+
+/* check contents of NOMS dataset */
+PROC CONTENTS DATA=NOMS;
+RUN;
+
+
+/*************************Analysis Code*************************/
+DATA NOMS;
+	SET NOMS;
+	LENGTH Time1 8.;
+	*create variable to measure length of time in days between interview date
+	and date entered into SPARS;
+	Time1 = intck('DAY', InterviewDate, EnterDate);
+RUN;
+
+/* average length of time between interviewdate and date entered into SPARS*/
+PROC SORT DATA=NOMS; BY Quarter; RUN;
+PROC MEANS DATA= NOMS MEAN STDDEV MIN MAX ;
+	VAR Time1;
+RUN;
+PROC MEANS DATA= NOMS MEAN STDDEV MIN MAX ; *by FFY quarter to measure changes over time;
+	VAR Time1;
+	BY Quarter;
+RUN;
+
+/* number of NOMS questionnaires rec'd over time */
+PROC FREQ DATA=NOMS;
+	TABLES Quarter*Year /NOPERCENT NOROW NOCOL;
+RUN;
+
+/*data quality checks, overall*/
+PROC FREQ DATA=NOMS;
+	TABLES ClientID ConductedInterview InterviewDate 
+			TraumaScreenedConducted SuicideScreen SuicideSafetyPlanDeveloped
+			SuicideLethalAssessed/ MISSING NOPERCENT;
+	TABLES Age_at_Interview Gender SexualIdentity RaceEthnicity
+			Education Enrolled Employment / MISSING NOPERCENT;
+RUN;
+
+/*data quality checks, by site*/
+PROC FREQ DATA=NOMS;
+	TABLES (ClientID ConductedInterview InterviewDate 
+			TraumaScreenedConducted SuicideScreen SuicideSafetyPlanDeveloped
+			SuicideLethalAssessed)*SiteID/ MISSING NOPERCENT;
+	TABLES (Age_at_Interview Gender SexualIdentity RaceEthnicity
+			Education Enrolled Employment)*SiteID / MISSING NOPERCENT;
+RUN;
+
+
+/********************Demographics and Diagnoses********************/
+PROC MEANS DATA=NOMS;
+	VAR Age_at_Interview;
+RUN;
+
+PROC FREQ DATA=NOMS;
+	TABLES agegroup_s / NOCUM;
+	TABLES Gender SexualIdentity / NOCUM;
+	TABLES RaceEthnicity SpeakOtherLanguage_EN/ NOCUM;
+	TABLES TraumaScreenedConducted SuicideScreen SuicideSafetyPlanDeveloped
+			SuicideLethalAssessed/ NOCUM;
+	TABLES EverServed  ActiveDuty_Self/ NOCUM;
+	TABLES DiagnosisOne DiagnosisTwo DiagnosisThree/ NOCUM ;
+RUN;
+
+/********************Section A. Functioning********************/
+PROC FREQ DATA=NOMS;
+	TABLES  OverallMentalHealth HandlingDailyLife DealwithUnexpectedEvents
+			GetsAlongWithFriends GetsAlongWithFamily SocialSituations 
+			SchoolOrWork SafePlaceToLive/ NOCUM;
+	TABLES 	Nervous Hopeless Restless Depressed EverythingEffort EverythingEffort
+			Worthless PsychologicalEmotionalProblems / NOCUM;
+RUN;
+
+
+/********************Section B. Stability in Housing********************/
+PROC FREQ DATA=NOMS;
+	TABLES BeenHomeless SpentTimeHospitalMHC SpentTimeDetox SpentTimeJail
+			SpentTimeER LivingConditionsSatisfaction Housing / NOCUM ;
+RUN;
+
+
+/********************Section C. Education and Employment********************/
+PROC FREQ DATA=NOMS;
+	TABLES Enrolled Education Employment EnoughMoneyForNeeds / NOCUM;
+RUN;
+
+/********************Section D. Crime and Criminal Justice Status********************/
+PROC FREQ DATA=NOMS;
+	TABLES BeenArrested SpentTimeJailorProbation / NOCUM;
+RUN;
+
+/********************Section E. Perception of Care********************/
+PROC FREQ DATA=NOMS;
+	TABLES Recover Complain Rights Responsibility SideEffects SharingTreatmentInformation SensitiveToCulture
+	InformationNeeded ConsumerRunPrograms ComfortableAskingQuestions TreatmentGoals LikeServices Choices
+	RecommendAgency WhoAdministered
+/ NOCUM;
+RUN;
+
+/********************Section F. Social Connectedness********************/
+PROC FREQ DATA=NOMS;
+	TABLES Friendships EnjoyPeople BelongInCommunity SupportFamilyFriends SupportFromFamily
+			GenerallyAccomplishGoal 
+
+/********************Reassessment Status********************/
+PROC FREQ DATA=NOMS;
+	TABLES NoContact90Days StillReceivingServices/ NOCUM;
+RUN;
+
+
+/********************Discharge********************/
+PROC FREQ DATA=NOMS;
+	TABLES DischargeDate DischargeStatus / NOCUM;
+RUN;
+
+
+/********************Services Received********************/
+PROC FREQ DATA=NOMS;
+	TABLES Svc_Screening Svc_Assessment Svc_TreatmentPlanning Svc_Psychopharmacological Svc_MentalHealth
+	Svc_MentalHealthFreq Svc_MH_FreqPeriod Svc_CoOccuring Svc_TraumaSpecific Svc_ReferredCore Svc_MedicalCare
+	Svc_Employment Svc_Family Svc_ChildCare Svc_Transportation Svc_Education Svc_Housing Svc_SocialRecreational
+	Svc_ConsumerOperated Svc_HIVTesting Svc_ReferredSupport
+	/ NOCUM;
+RUN;
